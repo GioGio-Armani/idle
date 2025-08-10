@@ -69,7 +69,9 @@ export default function IdleGame() {
   const [monsterMaxHp, setMonsterMaxHp] = useState(initialMonsterHpForLevel(1));
   const [monsterHp, setMonsterHp] = useState(monsterMaxHp);
   const [loaded, setLoaded] = useState(false);
-  const [slashes, setSlashes] = useState<{ id: number; x: number; y: number; angle: number }[]>([]);
+  const [slashes, setSlashes] = useState<
+    { id: number; x: number; y: number; angle: number }[]
+  >([]);
 
   const lastTickRef = useRef<number>(Date.now());
 
@@ -148,37 +150,46 @@ export default function IdleGame() {
     setMonsterHp(hp);
   }, [level]);
 
-  const handleAttack = useCallback((e?: React.MouseEvent | React.TouchEvent) => {
-    // Slash animation at click/touch point
-    const container = containerRef.current;
-    if (container && e) {
-      const rect = container.getBoundingClientRect();
-      const clientX = "touches" in e ? e.touches[0].clientX : (e as React.MouseEvent).clientX;
-      const clientY = "touches" in e ? e.touches[0].clientY : (e as React.MouseEvent).clientY;
-      const x = clientX - rect.left;
-      const y = clientY - rect.top;
-      const angle = -25 + Math.random() * 50;
-      const id = Date.now() + Math.random();
-      setSlashes((s) => [...s, { id, x, y, angle }]);
-      setTimeout(() => {
-        setSlashes((s) => s.filter((it) => it.id !== id));
-      }, 360);
-    }
-
-    setMonsterHp((hp) => {
-      const nextHp = Math.max(0, hp - tapDamage);
-      if (nextHp <= 0) {
-        // Reward: gold equal to 5% of monster max HP (rounded)
-        setGold((g) => g + Math.max(1, Math.floor(monsterMaxHp * 0.05)));
-        // Chance to drop a small bonus
-        if (Math.random() < 0.05) setGold((g) => g + 25);
-        // Advance level
-        setTimeout(nextLevel, 0);
-        return 0;
+  const handleAttack = useCallback(
+    (e?: React.MouseEvent | React.TouchEvent) => {
+      // Slash animation at click/touch point
+      const container = containerRef.current;
+      if (container && e) {
+        const rect = container.getBoundingClientRect();
+        const clientX =
+          "touches" in e
+            ? e.touches[0].clientX
+            : (e as React.MouseEvent).clientX;
+        const clientY =
+          "touches" in e
+            ? e.touches[0].clientY
+            : (e as React.MouseEvent).clientY;
+        const x = clientX - rect.left;
+        const y = clientY - rect.top;
+        const angle = -25 + Math.random() * 50;
+        const id = Date.now() + Math.random();
+        setSlashes((s) => [...s, { id, x, y, angle }]);
+        setTimeout(() => {
+          setSlashes((s) => s.filter((it) => it.id !== id));
+        }, 360);
       }
-      return nextHp;
-    });
-  }, [tapDamage, monsterMaxHp, nextLevel]);
+
+      setMonsterHp((hp) => {
+        const nextHp = Math.max(0, hp - tapDamage);
+        if (nextHp <= 0) {
+          // Reward: gold equal to 5% of monster max HP (rounded)
+          setGold((g) => g + Math.max(1, Math.floor(monsterMaxHp * 0.05)));
+          // Chance to drop a small bonus
+          if (Math.random() < 0.05) setGold((g) => g + 25);
+          // Advance level
+          setTimeout(nextLevel, 0);
+          return 0;
+        }
+        return nextHp;
+      });
+    },
+    [tapDamage, monsterMaxHp, nextLevel]
+  );
 
   const buyTapUpgrade = useCallback(() => {
     if (gold < nextTapUpgradeCost) return;
@@ -236,7 +247,10 @@ export default function IdleGame() {
   const canBuyArcaneForge = level >= 5;
 
   return (
-    <div ref={containerRef} className="with-aurora min-h-screen w-full flex flex-col items-center justify-between p-4 sm:p-6 text-foreground bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-indigo-950 via-slate-950 to-black">
+    <div
+      ref={containerRef}
+      className="with-aurora min-h-screen w-full flex flex-col items-center justify-between p-4 sm:p-6 text-foreground bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-indigo-950 via-slate-950 to-black"
+    >
       {/* Header */}
       <header className="w-full max-w-md flex items-center justify-between">
         <div>
@@ -318,18 +332,20 @@ export default function IdleGame() {
               <div
                 key={s.id}
                 className="slash"
-                style={{
-                  left: s.x,
-                  top: s.y,
-                  transformOrigin: "center",
-                  // provide CSS vars for keyframes
-                  // @ts-expect-error custom properties
-                  "--angle": `${s.angle}deg`,
-                  // @ts-expect-error custom properties
-                  "--sx": `${Math.cos((s.angle * Math.PI) / 180) * -14}px`,
-                  // @ts-expect-error custom properties
-                  "--sy": `${Math.sin((s.angle * Math.PI) / 180) * 14}px`,
-                }}
+                style={
+                  {
+                    left: s.x,
+                    top: s.y,
+                    transformOrigin: "center",
+                    ["--angle" as any]: `${s.angle}deg`,
+                    ["--sx" as any]: `${
+                      Math.cos((s.angle * Math.PI) / 180) * -14
+                    }px`,
+                    ["--sy" as any]: `${
+                      Math.sin((s.angle * Math.PI) / 180) * 14
+                    }px`,
+                  } as React.CSSProperties
+                }
               />
             ))}
           </div>
@@ -347,9 +363,13 @@ export default function IdleGame() {
             Runic Blade
           </div>
           <div className="text-[11px] text-indigo-300/80">+1 DMG per tap</div>
-          <div className="mt-1 text-amber-300 text-sm">Cost: {formatNumber(nextTapUpgradeCost)} gold</div>
+          <div className="mt-1 text-amber-300 text-sm">
+            Cost: {formatNumber(nextTapUpgradeCost)} gold
+          </div>
           {!canBuyBlade && (
-            <div className="mt-1 text-[10px] text-rose-300/70">Unlocks at Lv 1</div>
+            <div className="mt-1 text-[10px] text-rose-300/70">
+              Unlocks at Lv 1
+            </div>
           )}
         </button>
 
@@ -362,9 +382,13 @@ export default function IdleGame() {
             Mystic Miners
           </div>
           <div className="text-[11px] text-indigo-300/80">+1 gold / sec</div>
-          <div className="mt-1 text-amber-300 text-sm">Cost: {formatNumber(nextPassiveUpgradeCost)} gold</div>
+          <div className="mt-1 text-amber-300 text-sm">
+            Cost: {formatNumber(nextPassiveUpgradeCost)} gold
+          </div>
           {!canBuyMiners && (
-            <div className="mt-1 text-[10px] text-rose-300/70">Unlocks at Lv 3</div>
+            <div className="mt-1 text-[10px] text-rose-300/70">
+              Unlocks at Lv 3
+            </div>
           )}
         </button>
 
@@ -378,11 +402,15 @@ export default function IdleGame() {
           disabled={!canBuyArcaneForge || gold < 100}
           className="rounded-xl p-3 text-left bg-slate-900/60 ring-1 ring-white/10 hover:ring-indigo-400/40 hover:bg-slate-900/70 disabled:opacity-50 disabled:saturate-50"
         >
-          <div className="text-sm font-fantasy text-indigo-200">Arcane Forge</div>
+          <div className="text-sm font-fantasy text-indigo-200">
+            Arcane Forge
+          </div>
           <div className="text-[11px] text-indigo-300/80">+3 DMG per tap</div>
           <div className="mt-1 text-amber-300 text-sm">Cost: 100 gold</div>
           {!canBuyArcaneForge && (
-            <div className="mt-1 text-[10px] text-rose-300/70">Unlocks at Lv 5</div>
+            <div className="mt-1 text-[10px] text-rose-300/70">
+              Unlocks at Lv 5
+            </div>
           )}
         </button>
       </section>
