@@ -69,6 +69,7 @@ export default function IdleGame() {
   const [monsterMaxHp, setMonsterMaxHp] = useState(initialMonsterHpForLevel(1));
   const [monsterHp, setMonsterHp] = useState(monsterMaxHp);
   const [loaded, setLoaded] = useState(false);
+  const [slashes, setSlashes] = useState<{ id: number; x: number; y: number; angle: number }[]>([]);
 
   const lastTickRef = useRef<number>(Date.now());
 
@@ -147,7 +148,23 @@ export default function IdleGame() {
     setMonsterHp(hp);
   }, [level]);
 
-  const handleAttack = useCallback(() => {
+  const handleAttack = useCallback((e?: React.MouseEvent | React.TouchEvent) => {
+    // Slash animation at click/touch point
+    const container = containerRef.current;
+    if (container && e) {
+      const rect = container.getBoundingClientRect();
+      const clientX = "touches" in e ? e.touches[0].clientX : (e as React.MouseEvent).clientX;
+      const clientY = "touches" in e ? e.touches[0].clientY : (e as React.MouseEvent).clientY;
+      const x = clientX - rect.left;
+      const y = clientY - rect.top;
+      const angle = -25 + Math.random() * 50;
+      const id = Date.now() + Math.random();
+      setSlashes((s) => [...s, { id, x, y, angle }]);
+      setTimeout(() => {
+        setSlashes((s) => s.filter((it) => it.id !== id));
+      }, 360);
+    }
+
     setMonsterHp((hp) => {
       const nextHp = Math.max(0, hp - tapDamage);
       if (nextHp <= 0) {
@@ -211,15 +228,22 @@ export default function IdleGame() {
     return () => window.removeEventListener("beforeunload", onBeforeUnload);
   }, [gold, level, tapDamage, passiveIncome, monsterMaxHp, monsterHp]);
 
+  const containerRef = useRef<HTMLDivElement | null>(null);
+
+  // Level-gated upgrade requirements
+  const canBuyBlade = level >= 1;
+  const canBuyMiners = level >= 3;
+  const canBuyArcaneForge = level >= 5;
+
   return (
-    <div className="min-h-screen w-full flex flex-col items-center justify-between p-4 sm:p-6 text-foreground bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-indigo-900 via-slate-900 to-black">
+    <div ref={containerRef} className="with-aurora min-h-screen w-full flex flex-col items-center justify-between p-4 sm:p-6 text-foreground bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-indigo-950 via-slate-950 to-black">
       {/* Header */}
       <header className="w-full max-w-md flex items-center justify-between">
         <div>
-          <h1 className="font-fantasy text-2xl sm:text-3xl text-indigo-200 drop-shadow-[0_0_12px_rgba(129,140,248,0.65)]">
+          <h1 className="font-fantasy title-glow text-3xl sm:text-4xl text-indigo-200 tracking-wide">
             Arcane Clicker
           </h1>
-          <p className="text-xs text-indigo-300/70">Level {level}</p>
+          <p className="text-xs text-indigo-300/80">Level {level}</p>
         </div>
         <button
           onClick={handleHardReset}
@@ -268,45 +292,98 @@ export default function IdleGame() {
             />
           </div>
           <div
-            onClick={handleAttack}
-            className="mt-4 aspect-[16/10] sm:aspect-[16/8] rounded-xl border border-white/10 bg-[radial-gradient(circle_at_50%_40%,rgba(255,255,255,0.06),transparent_60%)] flex items-center justify-center active:scale-[0.99] transition-transform"
+            onClick={(e) => handleAttack(e)}
+            onTouchStart={(e) => handleAttack(e)}
+            className="mt-4 aspect-[16/10] sm:aspect-[16/8] rounded-xl border border-white/10 bg-[radial-gradient(circle_at_50%_40%,rgba(255,255,255,0.06),transparent_60%)] flex items-center justify-center active:scale-[0.99] transition-transform relative"
           >
-            <div className="text-center">
-              <div className="text-5xl sm:text-6xl">🜏</div>
-              <div className="text-xs text-indigo-200/80">Tap to strike</div>
+            {/* CSS Monster */}
+            <div className="relative w-40 sm:w-48 aspect-square">
+              <div className="absolute inset-0 rounded-full bg-gradient-to-b from-slate-300 to-slate-600 ring-1 ring-white/20 shadow-2xl" />
+              {/* eyes */}
+              <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-24 h-16">
+                <div className="absolute left-0 top-0 w-8 h-8 bg-black/80 rounded-full shadow-inner" />
+                <div className="absolute right-0 top-0 w-8 h-8 bg-black/80 rounded-full shadow-inner" />
+                <div className="absolute left-2 top-2 w-4 h-4 bg-white/90 rounded-full animate-pulse" />
+                <div className="absolute right-2 top-2 w-4 h-4 bg-white/90 rounded-full animate-pulse" />
+              </div>
+              {/* mouth */}
+              <div className="absolute left-1/2 bottom-8 -translate-x-1/2 w-20 h-4 bg-black/70 rounded-b-full" />
+              {/* horns */}
+              <div className="absolute -top-2 left-4 w-8 h-8 rotate-[-25deg] border-l-8 border-b-8 border-transparent border-l-rose-400/70 border-b-rose-400/70" />
+              <div className="absolute -top-2 right-4 w-8 h-8 rotate-[25deg] border-r-8 border-b-8 border-transparent border-r-rose-400/70 border-b-rose-400/70" />
             </div>
+
+            {/* Slashes */}
+            {slashes.map((s) => (
+              <div
+                key={s.id}
+                className="slash"
+                style={{
+                  left: s.x,
+                  top: s.y,
+                  transformOrigin: "center",
+                  // provide CSS vars for keyframes
+                  // @ts-expect-error custom properties
+                  "--angle": `${s.angle}deg`,
+                  // @ts-expect-error custom properties
+                  "--sx": `${Math.cos((s.angle * Math.PI) / 180) * -14}px`,
+                  // @ts-expect-error custom properties
+                  "--sy": `${Math.sin((s.angle * Math.PI) / 180) * 14}px`,
+                }}
+              />
+            ))}
           </div>
         </div>
       </section>
 
-      {/* Upgrades */}
+      {/* Upgrades (level gated) */}
       <section className="w-full max-w-md mt-6 mb-4 grid grid-cols-2 gap-3">
         <button
           onClick={buyTapUpgrade}
-          disabled={gold < nextTapUpgradeCost}
+          disabled={!canBuyBlade || gold < nextTapUpgradeCost}
           className="rounded-xl p-3 text-left bg-slate-900/60 ring-1 ring-white/10 hover:ring-indigo-400/40 hover:bg-slate-900/70 disabled:opacity-50 disabled:saturate-50"
         >
           <div className="text-sm font-fantasy text-indigo-200">
             Runic Blade
           </div>
           <div className="text-[11px] text-indigo-300/80">+1 DMG per tap</div>
-          <div className="mt-1 text-amber-300 text-sm">
-            Cost: {formatNumber(nextTapUpgradeCost)} gold
-          </div>
+          <div className="mt-1 text-amber-300 text-sm">Cost: {formatNumber(nextTapUpgradeCost)} gold</div>
+          {!canBuyBlade && (
+            <div className="mt-1 text-[10px] text-rose-300/70">Unlocks at Lv 1</div>
+          )}
         </button>
 
         <button
           onClick={buyPassiveUpgrade}
-          disabled={gold < nextPassiveUpgradeCost}
+          disabled={!canBuyMiners || gold < nextPassiveUpgradeCost}
           className="rounded-xl p-3 text-left bg-slate-900/60 ring-1 ring-white/10 hover:ring-indigo-400/40 hover:bg-slate-900/70 disabled:opacity-50 disabled:saturate-50"
         >
           <div className="text-sm font-fantasy text-indigo-200">
             Mystic Miners
           </div>
           <div className="text-[11px] text-indigo-300/80">+1 gold / sec</div>
-          <div className="mt-1 text-amber-300 text-sm">
-            Cost: {formatNumber(nextPassiveUpgradeCost)} gold
-          </div>
+          <div className="mt-1 text-amber-300 text-sm">Cost: {formatNumber(nextPassiveUpgradeCost)} gold</div>
+          {!canBuyMiners && (
+            <div className="mt-1 text-[10px] text-rose-300/70">Unlocks at Lv 3</div>
+          )}
+        </button>
+
+        {/* Example third gated upgrade (unlocks at Lv 5) */}
+        <button
+          onClick={() => {
+            if (!canBuyArcaneForge || gold < 100) return;
+            setGold((g) => g - 100);
+            setTapDamage((d) => d + 3);
+          }}
+          disabled={!canBuyArcaneForge || gold < 100}
+          className="rounded-xl p-3 text-left bg-slate-900/60 ring-1 ring-white/10 hover:ring-indigo-400/40 hover:bg-slate-900/70 disabled:opacity-50 disabled:saturate-50"
+        >
+          <div className="text-sm font-fantasy text-indigo-200">Arcane Forge</div>
+          <div className="text-[11px] text-indigo-300/80">+3 DMG per tap</div>
+          <div className="mt-1 text-amber-300 text-sm">Cost: 100 gold</div>
+          {!canBuyArcaneForge && (
+            <div className="mt-1 text-[10px] text-rose-300/70">Unlocks at Lv 5</div>
+          )}
         </button>
       </section>
 
