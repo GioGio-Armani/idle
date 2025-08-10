@@ -14,6 +14,12 @@ type SaveState = {
 
 const STORAGE_KEY = "idle-clicker-save-v1";
 
+type SlashStyle = React.CSSProperties & {
+  "--angle"?: string;
+  "--sx"?: string;
+  "--sy"?: string;
+};
+
 function formatNumber(value: number): string {
   if (value < 1000) return value.toString();
   const units = [
@@ -337,14 +343,10 @@ export default function IdleGame() {
                     left: s.x,
                     top: s.y,
                     transformOrigin: "center",
-                    ["--angle" as any]: `${s.angle}deg`,
-                    ["--sx" as any]: `${
-                      Math.cos((s.angle * Math.PI) / 180) * -14
-                    }px`,
-                    ["--sy" as any]: `${
-                      Math.sin((s.angle * Math.PI) / 180) * 14
-                    }px`,
-                  } as React.CSSProperties
+                    "--angle": `${s.angle}deg`,
+                    "--sx": `${Math.cos((s.angle * Math.PI) / 180) * -14}px`,
+                    "--sy": `${Math.sin((s.angle * Math.PI) / 180) * 14}px`,
+                  } as SlashStyle
                 }
               />
             ))}
