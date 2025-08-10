@@ -80,8 +80,11 @@ body {
   }
   100% {
     opacity: 0;
-    transform: translate(calc(var(--sx, -12px) * -3),
-        calc(var(--sy, 12px) * -3)) rotate(var(--angle, -25deg)) scale(1.05);
+    transform: translate(
+        calc(var(--sx, -12px) * -3),
+        calc(var(--sy, 12px) * -3)
+      )
+      rotate(var(--angle, -25deg)) scale(1.05);
   }
 }
 
@@ -99,4 +102,124 @@ body {
   border-radius: 9999px;
   animation: slash 320ms ease-out forwards;
   pointer-events: none;
+}
+
+/* Floating damage numbers */
+@keyframes damage-float {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) translateY(4px) scale(0.9);
+  }
+  20% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) translateY(-40px) scale(1.05);
+  }
+}
+
+.damage-pop {
+  position: absolute;
+  left: 0;
+  top: 0;
+  transform: translate(-50%, -50%);
+  font-weight: 700;
+  font-size: 14px;
+  color: #e2e8f0;
+  text-shadow: 0 0 8px rgba(0, 0, 0, 0.6);
+  animation: damage-float 820ms ease-out forwards;
+  pointer-events: none;
+}
+
+.damage-pop.crit {
+  color: #fbbf24;
+  text-shadow: 0 0 10px rgba(251, 191, 36, 0.8);
+}
+
+/* Attack sparks (auto attacks visual) */
+@keyframes spark-pop {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.6);
+  }
+  40% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(1.4);
+  }
+}
+
+.spark-pop {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  border-radius: 9999px;
+  background: radial-gradient(
+    circle,
+    rgba(255, 255, 255, 0.95),
+    var(--spark, #60a5fa)
+  );
+  box-shadow: 0 0 12px var(--spark, #60a5fa);
+  animation: spark-pop 520ms ease-out forwards;
+  pointer-events: none;
+}
+
+/* Allies orbiting the monster */
+.ally {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%) rotate(var(--ang, 0deg))
+    translate(var(--rad, 56px)) rotate(calc(-1 * var(--ang, 0deg)));
+  transition: transform 300ms ease-out;
+}
+
+.ally-icon {
+  width: 18px;
+  height: 18px;
+  border-radius: 9999px;
+  display: grid;
+  place-items: center;
+  font-size: 12px;
+  line-height: 1;
+  box-shadow: 0 0 8px rgba(0, 0, 0, 0.35);
+  animation: ally-bob 1.6s ease-in-out infinite;
+}
+
+@keyframes ally-bob {
+  0% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-2px);
+  }
+  100% {
+    transform: translateY(0);
+  }
+}
+
+/* Monster shake on crit */
+@keyframes hit-shake {
+  0% {
+    transform: translate(0px, 0px) rotate(0deg);
+  }
+  25% {
+    transform: translate(2px, -1px) rotate(-0.6deg);
+  }
+  50% {
+    transform: translate(-2px, 1px) rotate(0.6deg);
+  }
+  75% {
+    transform: translate(1px, -1px) rotate(-0.3deg);
+  }
+  100% {
+    transform: translate(0px, 0px) rotate(0deg);
+  }
+}
+
+.shake {
+  animation: hit-shake 180ms ease-in-out;
 }

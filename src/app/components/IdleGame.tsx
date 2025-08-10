@@ -109,6 +109,13 @@ export default function IdleGame() {
     armorBreakCdEndAt: 0,
   });
   const [bossDeadlineAt, setBossDeadlineAt] = useState<number | null>(null);
+  const [damagePops, setDamagePops] = useState<
+    { id: number; x: number; y: number; value: number; crit: boolean }[]
+  >([]);
+  const [sparks, setSparks] = useState<
+    { id: number; x: number; y: number; color: string }[]
+  >([]);
+  const [shakeKey, setShakeKey] = useState(0);
 
   const lastTickRef = useRef<number>(Date.now());
 
@@ -286,6 +293,16 @@ export default function IdleGame() {
         autoDamage += mercenariesLevel;
       }
       if (autoDamage > 0) {
+        // spark visual near monster center (percentage coordinates inside container)
+        const id = Date.now() + Math.random();
+        const x = 50 + (Math.random() * 16 - 8); // %
+        const y = 48 + (Math.random() * 16 - 8); // %
+        const color =
+          familiars.golem.unlocked && Math.random() < 0.12
+            ? "#f87171"
+            : "#60a5fa";
+        setSparks((s) => [...s, { id, x, y, color }]);
+        setTimeout(() => setSparks((s) => s.filter((sp) => sp.id !== id)), 550);
         applyDamage(autoDamage);
       }
 
@@ -372,8 +389,32 @@ export default function IdleGame() {
       setMana((m) => Math.min(manaMax, m + 1));
       // Crit + burst multipliers
       const base = tapDamage * tapMultiplier;
-      const dmg =
-        Math.random() < critChance ? Math.floor(base * critMultiplier) : base;
+      const isCrit = Math.random() < critChance;
+      const dmg = isCrit ? Math.floor(base * critMultiplier) : base;
+      // floating damage text at click point
+      if (container && e) {
+        const rect = container.getBoundingClientRect();
+        const clientX =
+          "touches" in e
+            ? e.touches[0].clientX
+            : (e as React.MouseEvent).clientX;
+        const clientY =
+          "touches" in e
+            ? e.touches[0].clientY
+            : (e as React.MouseEvent).clientY;
+        const x = clientX - rect.left;
+        const y = clientY - rect.top;
+        const id = Date.now() + Math.random();
+        setDamagePops((arr) => [
+          ...arr,
+          { id, x, y, value: dmg, crit: isCrit },
+        ]);
+        setTimeout(
+          () => setDamagePops((arr) => arr.filter((p) => p.id !== id)),
+          900
+        );
+      }
+      if (isCrit) setShakeKey((k) => k + 1);
       applyDamage(dmg);
     },
     [manaMax, tapDamage, tapMultiplier, critChance, critMultiplier, applyDamage]
@@ -640,8 +681,23 @@ export default function IdleGame() {
             className="mt-4 aspect-[16/10] sm:aspect-[16/8] rounded-xl border border-white/10 bg-[radial-gradient(circle_at_50%_40%,rgba(255,255,255,0.06),transparent_60%)] flex items-center justify-center active:scale-[0.99] transition-transform relative"
           >
             {/* CSS Monster */}
-            <div className="relative w-40 sm:w-48 aspect-square">
-              <div className="absolute inset-0 rounded-full bg-gradient-to-b from-slate-300 to-slate-600 ring-1 ring-white/20 shadow-2xl" />
+            <div
+              className={`relative w-40 sm:w-48 aspect-square ${
+                shakeKey ? "shake" : ""
+              }`}
+              onAnimationEnd={() => setShakeKey(0)}
+            >
+              {/* vary monster skin with zone */}
+              <div
+                className={
+                  "absolute inset-0 rounded-full ring-1 ring-white/20 shadow-2xl " +
+                  (level <= 20
+                    ? "bg-gradient-to-b from-emerald-200 to-emerald-600"
+                    : level <= 40
+                    ? "bg-gradient-to-b from-purple-300 to-purple-700"
+                    : "bg-gradient-to-b from-sky-300 to-sky-700")
+                }
+              />
               {/* eyes */}
               <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-24 h-16">
                 <div className="absolute left-0 top-0 w-8 h-8 bg-black/80 rounded-full shadow-inner" />
@@ -654,6 +710,64 @@ export default function IdleGame() {
               {/* horns */}
               <div className="absolute -top-2 left-4 w-8 h-8 rotate-[-25deg] border-l-8 border-b-8 border-transparent border-l-rose-400/70 border-b-rose-400/70" />
               <div className="absolute -top-2 right-4 w-8 h-8 rotate-[25deg] border-r-8 border-b-8 border-transparent border-r-rose-400/70 border-b-rose-400/70" />
+            </div>
+
+            {/* Allies orbiting monster (sprite/golem/dragon) */}
+            <div className="pointer-events-none absolute inset-0">
+              {familiars.sprite.unlocked && (
+                <div
+                  className="ally"
+                  style={
+                    {
+                      "--ang": "20deg",
+                      "--rad": "56px",
+                    } as React.CSSProperties & {
+                      "--ang"?: string;
+                      "--rad"?: string;
+                    }
+                  }
+                >
+                  <div className="ally-icon bg-emerald-400/80 ring-1 ring-white/20">
+                    ✨
+                  </div>
+                </div>
+              )}
+              {familiars.golem.unlocked && (
+                <div
+                  className="ally"
+                  style={
+                    {
+                      "--ang": "160deg",
+                      "--rad": "62px",
+                    } as React.CSSProperties & {
+                      "--ang"?: string;
+                      "--rad"?: string;
+                    }
+                  }
+                >
+                  <div className="ally-icon bg-rose-400/80 ring-1 ring-white/20">
+                    🪨
+                  </div>
+                </div>
+              )}
+              {familiars.dragon.unlocked && (
+                <div
+                  className="ally"
+                  style={
+                    {
+                      "--ang": "280deg",
+                      "--rad": "60px",
+                    } as React.CSSProperties & {
+                      "--ang"?: string;
+                      "--rad"?: string;
+                    }
+                  }
+                >
+                  <div className="ally-icon bg-yellow-300/80 ring-1 ring-white/20">
+                    🐉
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Slashes */}
@@ -670,6 +784,32 @@ export default function IdleGame() {
                     "--sx": `${Math.cos((s.angle * Math.PI) / 180) * -14}px`,
                     "--sy": `${Math.sin((s.angle * Math.PI) / 180) * 14}px`,
                   } as SlashStyle
+                }
+              />
+            ))}
+
+            {/* Damage pops */}
+            {damagePops.map((d) => (
+              <div
+                key={d.id}
+                className={`damage-pop ${d.crit ? "crit" : ""}`}
+                style={{ left: d.x, top: d.y }}
+              >
+                {d.crit ? `${d.value}!` : d.value}
+              </div>
+            ))}
+
+            {/* Auto-attack sparks */}
+            {sparks.map((sp) => (
+              <div
+                key={sp.id}
+                className="spark-pop"
+                style={
+                  {
+                    left: `${sp.x}%`,
+                    top: `${sp.y}%`,
+                    "--spark": sp.color,
+                  } as React.CSSProperties & { "--spark"?: string }
                 }
               />
             ))}
